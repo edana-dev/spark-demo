@@ -5,18 +5,9 @@ import com.mongodb.spark.config.ReadConfig
 import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.feature.StringIndexer
 import org.apache.spark.ml.recommendation.ALS
-import org.apache.spark.sql.{Encoder, Encoders, SparkSession}
-import org.apache.spark.sql.functions.monotonically_increasing_id
+import org.apache.spark.sql.SparkSession
 
-object MongoDemo {
-
-  case class Rating(userId: Int, movieId: Int, rating: Float, timestamp: Long)
-
-  def parseRating(str: String): Rating = {
-    val fields = str.split("::")
-    assert(fields.size == 4)
-    Rating(fields(0).toInt, fields(1).toInt, fields(2).toFloat, fields(3).toLong)
-  }
+object Training {
 
   def main(args: Array[String]): Unit = {
 
@@ -27,8 +18,6 @@ object MongoDemo {
       //      .config("spark.mongodb.auth.uri", "mongodb://root:123%25abc@119.23.34.178:27017/admin")
       //      .config("spark.mongodb.input.uri", "mongodb://119.23.34.178:27017/recommend.gio_custom_event_202012")
       .getOrCreate()
-
-    import spark.implicits._
 
     val readConfig = ReadConfig(Map("uri" -> "mongodb://root:123%25abc@119.23.34.178:27017",
       "database" -> "recommend", "collection" -> "gio_custom_event_202012"))
@@ -59,13 +48,13 @@ object MongoDemo {
     usersDf.createTempView("users")
     itemsDf.createTempView("items")
 
-    val ratings = spark.sql("select userId, itemId, count(1) as rating from logs join users on logs.userCode = users.userCode join items on logs.itemCode = items.itemCode group by userId, itemId")
+    val ratings = spark.sql(s"select userId, itemId, count(1) as rating from logs join users on logs.userCode = users.userCode join items on logs.itemCode = items.itemCode group by userId, itemId")
     ratings.show()
 
     val Array(training, test) = ratings.randomSplit(Array(0.8, 0.2))
 
     val als = new ALS()
-      .setMaxIter(5)
+      .setMaxIter(20)
       .setRegParam(0.01)
       .setUserCol("userId")
       .setItemCol("itemId")
@@ -85,20 +74,13 @@ object MongoDemo {
       .setPredictionCol("prediction")
     val rmse = evaluator.evaluate(predictions)
 
+
+
     println(s"Root-mean-square error = $rmse")
 
-//    val userRecs = model.recommendForAllUsers(10)
-//    val movieRecs = model.recommendForAllItems(10)
-//    val users = ratings.select(als.getUserCol).distinct().limit(3)
-//    val userSubsetRecs = model.recommendForUserSubset(users , 10)
-//    val movies = ratings.select(als.getItemCol).distinct().limit(3)
-//    val movieSubsetRecs = model.recommendForItemSubset(movies, 10)
-//
-//    userRecs.show()
-//    movieRecs.show()
-//
-//    userSubsetRecs.show()
-//    movieSubsetRecs.show()
+    model.write.overwrite().save("/tmp/mongo-demo/model")
+    usersDf.write.parquet("/tmp/mongo-demo/users.parquet")
+    itemsDf.write.parquet("/tmp/mongo-demo/items.parquet")
 
   }
 }
