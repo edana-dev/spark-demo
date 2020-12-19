@@ -35,6 +35,7 @@ object Training {
     val userIndexModel = userIndexer.fit(userCodes)
     val usersDf = userIndexModel.transform(userCodes)
     usersDf.show()
+    println("user count: " + usersDf.count())
 
     val itemCodes = df1.select("itemCode").distinct()
     val itemIndexer = new StringIndexer()
@@ -43,6 +44,7 @@ object Training {
     val itemIndexModel = itemIndexer.fit(itemCodes)
     val itemsDf = itemIndexModel.transform(itemCodes)
     itemsDf.show()
+    println("item count: " + itemsDf.count())
 
     df1.createTempView("logs")
     usersDf.createTempView("users")
@@ -50,6 +52,7 @@ object Training {
 
     val ratings = spark.sql(s"select userId, itemId, count(1) as rating from logs join users on logs.userCode = users.userCode join items on logs.itemCode = items.itemCode group by userId, itemId")
     ratings.show()
+    println("ratings count: " + ratings.count())
 
     val Array(training, test) = ratings.randomSplit(Array(0.8, 0.2))
 
@@ -75,12 +78,11 @@ object Training {
     val rmse = evaluator.evaluate(predictions)
 
 
-
     println(s"Root-mean-square error = $rmse")
 
-    model.write.overwrite().save("/tmp/mongo-demo/model")
-    usersDf.write.parquet("/tmp/mongo-demo/users.parquet")
-    itemsDf.write.parquet("/tmp/mongo-demo/items.parquet")
+    model.write.overwrite().save("/Users/season/Sources/Personal/spark-demo/src/main/resources/mongo/model")
+    usersDf.write.parquet("/Users/season/Sources/Personal/spark-demo/src/main/resources/mongo/users.parquet")
+    itemsDf.write.parquet("/Users/season/Sources/Personal/spark-demo/src/main/resources/mongo/items.parquet")
 
   }
 }

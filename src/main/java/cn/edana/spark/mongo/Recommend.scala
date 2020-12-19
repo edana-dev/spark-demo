@@ -24,10 +24,10 @@ object Recommend {
       .getOrCreate()
 
 
-    val model: ALSModel = ALSModel.load("/tmp/mongo-demo/model")
+    val model: ALSModel = ALSModel.load("/Users/season/Sources/Personal/spark-demo/src/main/resources/mongo/model")
 
-    val usersDf = spark.read.parquet("/tmp/mongo-demo/users.parquet")
-    val itemsDf = spark.read.parquet("/tmp/mongo-demo/items.parquet")
+    val usersDf = spark.read.parquet("/Users/season/Sources/Personal/spark-demo/src/main/resources/mongo/users.parquet")
+    val itemsDf = spark.read.parquet("/Users/season/Sources/Personal/spark-demo/src/main/resources/mongo/items.parquet")
     usersDf.createTempView("users")
     itemsDf.createTempView("items")
 
@@ -42,6 +42,8 @@ object Recommend {
 
     val userRecsDf = spark.sql("select user_recs.userId, userCode, recommendations from user_recs join users on user_recs.userId = users.userId")
     userRecsDf.show()
+
+
 
 
   }
